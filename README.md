@@ -1,56 +1,55 @@
-# 📈 Stock Price Trend Visualizer
+# 📈 Stock Price Trend Visualizer & Predictor
 
-This project is a real-time Stock Trend Visualizer that fetches historical stock data, calculates technical indicators (SMA, EMA, RSI, MACD), and prepares for predictive modeling. It is the foundation for an interactive dashboard and machine learning-based forecasting tool.
+This project is a real-time stock trend dashboard that fetches historical stock data, calculates technical indicators (SMA & EMA), and predicts the next-day closing price using a trained machine learning model.
 
----
-
-## 🔍 Features
-
-- ✅ Download real-time stock data using `yfinance`
-- ✅ Visualize stock closing price trends
-- ✅ Calculate and plot:
-  - 20-day Simple Moving Average (SMA)
-  - 20-day Exponential Moving Average (EMA)
-  - RSI (Relative Strength Index)
-  - MACD (Moving Average Convergence Divergence)
-- ✅ Prepares data for machine learning model (linear regression, LSTM)
-- 🚧 Streamlit dashboard (coming soon)
+### 🌐 Live App  
+👉 [Launch the App on Streamlit Cloud](https://stock-trend-visualizer-modeldate10july2025.streamlit.app)
 
 ---
 
-## 🧪 Sample Output
+## 🧠 Key Features
 
-### 📉 Closing Price with SMA & EMA
-![Example Plot]
-
-### 📊 RSI & MACD
-![RSI]
+- 📊 Visualizes historical stock prices with SMA and EMA overlays
+- 🤖 Predicts the next-day closing price using Linear Regression
+- 📡 Fetches real-time data from Yahoo Finance (`yfinance`)
+- 🚀 Deployed on Streamlit Cloud, no local setup required
 
 ---
 
 ## 🛠️ Tech Stack
 
-- Python
-- Pandas
-- yfinance
-- Matplotlib
-- Scikit-learn (for ML in next phase)
-- Streamlit (dashboard in next phase)
+| Tool          | Purpose                            |
+|---------------|-------------------------------------|
+| `Python`      | Core programming language           |
+| `Streamlit`   | Interactive web app framework       |
+| `scikit-learn`| ML model training & prediction      |
+| `yfinance`    | Real-time financial data retrieval  |
+| `pandas`      | Data preprocessing                  |
+| `matplotlib`  | Optional charting support           |
 
 ---
 
-## 📁 Project Structure
-
+## 📂 Repository Structure
 stock-trend-visualizer/
+├── app/
+│ ├── streamlit_app.py ← Main app script
+│ └── linear_model.pkl ← Trained ML model
 ├── notebooks/
-│ └── 01_data_collection.ipynb
-├── data/ # optional, for saved CSVs
-├── README.md
+│ ├── 01_data_collection.ipynb
+│ ├── 03_model_training.ipynb
 ├── requirements.txt
-└── .gitignore
+├── README.md
+
 ---
 
-## 📌 Author
+## 🧪 To Run Locally
 
-**Hriday Goyal**  
-[GitHub Profile](https://github.com/hriday-goyal)
+```bash
+git clone https://github.com/hriday-goyal/stock-trend-visualizer
+cd stock-trend-visualizer/app
+pip install -r ../requirements.txt
+streamlit run streamlit_app.py
+
+---
+## About the Creator
+Built by Hriday Goyal, an aspiring data scientist and high school innovator passionate about AI, finance, and real-world problem solving.
