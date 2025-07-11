@@ -59,7 +59,8 @@ if symbol:
 
         if not X_latest.empty:
             prediction = model.predict(X_latest)[0]
-            st.success(f"📌 Predicted Next Day Closing Price: **${prediction:.2f}**")
+            currency = "₹" if symbol.upper().endswith(".NS") or symbol.upper().endswith(".BO") else "$"
+            st.success(f"📌 Predicted Next Day Closing Price: **{currency}{prediction:.2f}**")
 
         # Show raw data
         with st.expander("📂 View Raw Data"):
