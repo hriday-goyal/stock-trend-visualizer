@@ -58,30 +58,32 @@ if symbol:
 
         X_latest = df_lagged.drop('Close', axis=1).tail(1)
 
-        if not X_latest.empty:
-            prediction = model.predict(X_latest)[0]
-            currency = "₹" if symbol.upper().endswith(".NS") or symbol.upper().endswith(".BO") else "$"
-            st.success(f"📌 Predicted Next Day Closing Price: **{currency}{prediction:.2f}**")
-# Plot actual vs predicted closing price (last 30 days)
-try:
-    st.subheader("📊 Actual vs Predicted Closing Price (Last 30 Days)")
+if not X_latest.empty:
+    prediction = model.predict(X_latest)[0]
+    currency = "₹" if symbol.upper().endswith(".NS") or symbol.upper().endswith(".BO") else "$"
+    st.success(f"📌 Predicted Next Day Closing Price: **{currency}{prediction:.2f}**")
 
-    df_plot = df_lagged.tail(30).copy()  # last 30 days of data
-    X_plot = df_plot.drop('Close', axis=1)
-    y_actual = df_plot['Close']
-    y_predicted = model.predict(X_plot)
+    # ✅ Add the plot code INSIDE this if-block
+    try:
+        st.subheader("📊 Actual vs Predicted Closing Price (Last 30 Days)")
 
-    fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(y_actual.index, y_actual, label="Actual Price", color='blue')
-    ax.plot(y_actual.index, y_predicted, label="Predicted Price", color='red', linestyle='--')
-    ax.set_title(f"{symbol} - Actual vs Predicted Closing Price")
-    ax.set_xlabel("Date")
-    ax.set_ylabel("Price")
-    ax.legend()
-    st.pyplot(fig)
+        df_plot = df_lagged.tail(30).copy()
+        X_plot = df_plot.drop('Close', axis=1)
+        y_actual = df_plot['Close']
+        y_predicted = model.predict(X_plot)
 
-except Exception as e:
-    st.warning(f"Could not generate comparison plot: {e}")
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot(y_actual.index, y_actual, label="Actual Price", color='blue')
+        ax.plot(y_actual.index, y_predicted, label="Predicted Price", color='red', linestyle='--')
+        ax.set_title(f"{symbol} - Actual vs Predicted Closing Price")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Price")
+        ax.legend()
+        st.pyplot(fig)
+
+    except Exception as e:
+        st.warning(f"Could not generate comparison plot: {e}")
+
 
         # Show raw data
         with st.expander("📂 View Raw Data"):
