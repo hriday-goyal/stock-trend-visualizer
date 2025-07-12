@@ -10,8 +10,16 @@ import numpy as np
 # ✅ Load Random Forest model
 @st.cache_resource
 def load_model():
-    with open("app/rf_model.pkl", "rb") as file:
-        model = pickle.load(file)
+    from tensorflow.keras.models import load_model
+import joblib
+
+@st.cache_resource
+def load_lstm_model():
+    model = load_model("app/lstm_model.h5")
+    scaler = joblib.load("app/lstm_scaler.pkl")
+    return model, scaler
+
+model, scaler = load_lstm_model()
     return model
 
 model = load_model()
