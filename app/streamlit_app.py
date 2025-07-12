@@ -15,8 +15,8 @@ This app uses historical stock data and a trained LSTM model to forecast stock p
 # === Load Model & Scaler ===
 @st.cache_resource
 def load_lstm_model():
-    model = load_model("app/lstm_model.h5")
-    scaler = joblib.load("app/lstm_scaler.pkl")
+    model = load_model("lstm_model.h5")
+    scaler = joblib.load("lstm_scaler.pkl")
     return model, scaler
 
 model, scaler = load_lstm_model()
