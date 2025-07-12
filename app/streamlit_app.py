@@ -92,8 +92,8 @@ df_ind.dropna(inplace=True)
 X_last = df_ind[features].tail(10).values.reshape(1, 10, len(features))
 pred_scaled = model.predict(X_last, verbose=0)[0][0]
 pred_unscaled = scaler.inverse_transform(
-    np.hstack([[[pred_scaled] + [0] * (len(features) - 1)]
-              ]))[0][0]
+    np.hstack([[[pred_scaled] + [0] * (len(features) - 1)]]
+))[0][0]
 
 currency = "₹" if symbol.upper().endswith(".NS") or symbol.upper().endswith(".BO") else "$"
 st.success(f"Predicted next day closing price: {currency}{pred_unscaled:.2f}")
