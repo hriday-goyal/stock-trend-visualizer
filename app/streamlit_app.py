@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 # Load the trained model
 @st.cache_resource
 def load_model():
-    with open("app/linear_model.pkl", "rb") as file:
+    with open("app/rf_model.pkl", "rb") as file:
         model = pickle.load(file)
     return model
 
