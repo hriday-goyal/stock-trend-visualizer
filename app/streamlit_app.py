@@ -1,18 +1,18 @@
-# 📈 Streamlit App for Stock Price Trend & Prediction (Random Forest Model)
-
 import streamlit as st
 import pandas as pd
-import yfinance as yf
-import pickle
-import matplotlib.pyplot as plt
 import numpy as np
-
-# ✅ Load Random Forest model
-@st.cache_resource
-def load_model():
-    from tensorflow.keras.models import load_model
+import yfinance as yf
+import matplotlib.pyplot as plt
 import joblib
+from tensorflow.keras.models import load_model
 
+st.set_page_config(page_title="📈 Stock Price Trend Visualizer & Predictor")
+st.title("📈 Stock Price Trend Visualizer & LSTM Predictor")
+st.markdown("""
+This app uses historical stock data and a trained LSTM model to forecast stock prices.
+""")
+
+# === Load Model & Scaler ===
 @st.cache_resource
 def load_lstm_model():
     model = load_model("app/lstm_model.h5")
@@ -20,81 +20,105 @@ def load_lstm_model():
     return model, scaler
 
 model, scaler = load_lstm_model()
-    return model
 
-model = load_model()
+# === Multi-step Forecast Function ===
+def multistep_forecast(df, steps, seq_len=10):
+    df_copy = df.copy()
+    df_copy['SMA_20'] = df_copy['Close'].rolling(20).mean()
+    df_copy['EMA_20'] = df_copy['Close'].ewm(span=20, adjust=False).mean()
+    delta = df_copy['Close'].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+    rs = gain / loss
+    df_copy['RSI_14'] = 100 - (100 / (1 + rs))
 
-# ✅ Sidebar - Stock selection
-st.sidebar.header("📊 Stock Price Predictor")
-symbol = st.sidebar.text_input("Enter Stock Symbol (e.g., AAPL, RELIANCE.NS)", value="AAPL")
-start = st.sidebar.date_input("Start Date", pd.to_datetime("2023-01-01"))
-end = st.sidebar.date_input("End Date", pd.to_datetime("today"))
+    for i in range(1, 6):
+        df_copy[f'lag_{i}'] = df_copy['Close'].shift(i)
 
-# ✅ Load stock data
-@st.cache_data
-def load_data(symbol, start, end):
-    df = yf.download(symbol, start=start, end=end)
-    df.columns.name = None
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = [col[0] if isinstance(col, tuple) else col for col in df.columns]
-    return df
+    features = ['Close', 'SMA_20', 'EMA_20', 'RSI_14',
+                'lag_1', 'lag_2', 'lag_3', 'lag_4', 'lag_5']
 
-df = load_data(symbol, start, end)
+    preds = []
+    window = df_copy[features].tail(seq_len).values
+    window_scaled = scaler.transform(window)
+
+    for _ in range(steps):
+        X = window_scaled.reshape(1, seq_len, -1)
+        next_scaled = model.predict(X, verbose=0)[0][0]
+        new_scaled_row = np.zeros((len(features),))
+        new_scaled_row[0] = next_scaled
+        new_scaled_row[1:] = window_scaled[-1, 1:]
+        window_scaled = np.vstack([window_scaled, new_scaled_row])[1:]
+        next_close = scaler.inverse_transform(
+            np.hstack([new_scaled_row.reshape(1, -1), np.zeros((1, 0))]))[0][0]
+        preds.append(next_close)
+
+    return preds
+
+# === Sidebar Inputs ===
+st.sidebar.header("Input Parameters")
+symbol = st.sidebar.text_input("Enter stock symbol (e.g. AAPL, RELIANCE.NS)", value="AAPL")
+start_date = st.sidebar.date_input("Start date", pd.to_datetime("2022-01-01"))
+
+# === Fetch Data ===
+end_date = pd.Timestamp.today()
+df = yf.download(symbol, start=start_date, end=end_date)
 
 if df.empty:
-    st.warning("No data found. Please check the stock symbol and date range.")
+    st.error("No data found. Please check the stock symbol or date range.")
     st.stop()
 
-# ✅ Add indicators
-df['SMA_20'] = df['Close'].rolling(window=20).mean()
-df['EMA_20'] = df['Close'].ewm(span=20, adjust=False).mean()
+st.subheader(f"Showing data for: {symbol}")
+st.line_chart(df['Close'])
 
-# RSI calculation
-delta = df['Close'].diff()
-gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+# === Predict next day ===
+st.subheader("📅 Next Day Price Prediction")
+df_ind = df.copy()
+df_ind['SMA_20'] = df_ind['Close'].rolling(20).mean()
+df_ind['EMA_20'] = df_ind['Close'].ewm(span=20, adjust=False).mean()
+delta = df_ind['Close'].diff()
+gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
 rs = gain / loss
-df['RSI_14'] = 100 - (100 / (1 + rs))
+df_ind['RSI_14'] = 100 - (100 / (1 + rs))
 
-# ✅ Prepare features for prediction
-df_lagged = df[['Close', 'SMA_20', 'EMA_20', 'RSI_14']].copy()
 for i in range(1, 6):
-    df_lagged[f'lag_{i}'] = df['Close'].shift(i)
+    df_ind[f'lag_{i}'] = df_ind['Close'].shift(i)
 
-df_lagged.dropna(inplace=True)
-features = ['lag_1', 'lag_2', 'lag_3', 'lag_4', 'lag_5', 'SMA_20', 'EMA_20', 'RSI_14']
-X_latest = df_lagged[features].tail(1)
+features = ['Close', 'SMA_20', 'EMA_20', 'RSI_14',
+            'lag_1', 'lag_2', 'lag_3', 'lag_4', 'lag_5']
+df_ind.dropna(inplace=True)
 
-# ✅ Predict
-if not X_latest.empty:
-    prediction = model.predict(X_latest)[0]
-    currency = "₹" if symbol.upper().endswith(".NS") or symbol.upper().endswith(".BO") else "$"
-    st.success(f"📌 Predicted Next Day Closing Price: **{currency}{prediction:.2f}**")
+X_last = df_ind[features].tail(10).values.reshape(1, 10, len(features))
+pred_scaled = model.predict(X_last, verbose=0)[0][0]
+pred_unscaled = scaler.inverse_transform(
+    np.hstack([[[pred_scaled] + [0] * (len(features) - 1)]
+              ]))[0][0]
 
-    # ✅ Plot actual vs predicted (last 30 days)
-    try:
-        st.subheader("📊 Actual vs Predicted Closing Price (Last 30 Days)")
-        df_plot = df_lagged.tail(30).copy()
-        X_plot = df_plot[features]
-        y_actual = df_plot['Close']
-        y_predicted = model.predict(X_plot)
+currency = "₹" if symbol.upper().endswith(".NS") or symbol.upper().endswith(".BO") else "$"
+st.success(f"Predicted next day closing price: {currency}{pred_unscaled:.2f}")
 
-        fig, ax = plt.subplots(figsize=(10, 4))
-        ax.plot(y_actual.index, y_actual, label="Actual Price", color='blue')
-        ax.plot(y_actual.index, y_predicted, label="Predicted Price", color='red', linestyle='--')
-        ax.set_title(f"{symbol} - Actual vs Predicted Closing Price")
-        ax.set_xlabel("Date")
-        ax.set_ylabel("Price")
-        ax.legend()
-        st.pyplot(fig)
-    except Exception as e:
-        st.warning(f"Could not generate comparison plot: {e}")
+# === Multi-step Forecast Section ===
+st.subheader("🧠 Extended Forecast (LSTM)")
+horizons = [1, 7, 30, 365]
+future_prices = {h: multistep_forecast(df.copy(), h)[-1] for h in horizons}
 
-# ✅ Show raw data
+cols = st.columns(len(horizons))
+for i, h in enumerate(horizons):
+    cols[i].metric(f"{h}-Day Forecast", f"{currency}{future_prices[h]:.2f}")
+
+# === Forecast Plot ===
+last_date = df.index[-1]
+future_dates = pd.date_range(last_date + pd.Timedelta(days=1), periods=max(horizons))
+
+plt.figure(figsize=(12, 5))
+plt.plot(df.index[-60:], df['Close'].tail(60), label="Actual Price", color='blue')
+plt.plot(future_dates, [future_prices[h] for h in horizons],
+         label="Forecast", color='red', linestyle='--', marker='o')
+plt.title(f"{symbol} - Forecast Up To {max(horizons)} Days")
+plt.legend()
+st.pyplot(plt)
+
+# Optional raw data view
 with st.expander("📂 View Raw Data"):
-    st.dataframe(df.tail(20))
-
-    else:
-        st.warning("No data found for the selected symbol and date range.")
-else:
-    st.info("Please enter a stock symbol to begin.")
+    st.dataframe(df.tail(30))
